@@ -1,5 +1,7 @@
 package org.ivory.srvs.cf;
 
-public class ProblemParser {
-	
+import org.ivory.srvs.cf.domain.model.Problem;
+
+public abstract class ProblemParser {	
+	public abstract void parseProblem(String html, Problem problem);
 }

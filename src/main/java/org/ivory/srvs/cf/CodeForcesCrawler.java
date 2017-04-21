@@ -1,5 +1,6 @@
 package org.ivory.srvs.cf;
 
+import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
@@ -18,6 +19,8 @@ import org.json.JSONTokener;
 public class CodeForcesCrawler {
 	// http://codeforces.com/api/contest.list?gym=true
 
+	private CodeForcesProblemParser parser = new CodeForcesProblemParser();
+	
 	public void fetchContestList() {
 		try {
 
@@ -53,6 +56,7 @@ public class CodeForcesCrawler {
 	// http://codeforces.com/api/problemset.problems
 	//
 	public void fetchProblems() {
+		List<Problem> ps = new ArrayList<Problem>();
 		try {
 			HttpClient httpClient = HttpClientBuilder.create().build();
 			HttpGet getRequest = new HttpGet("http://codeforces.com/api/problemset.problems");
@@ -68,7 +72,6 @@ public class CodeForcesCrawler {
 
 			JSONObject jsonObj = new JSONObject(tokener);
 			JSONArray problems = (JSONArray) jsonObj.getJSONObject("result").get("problems");
-			List<Problem> ps = new ArrayList<Problem>();
 			for (int i = 0; i < problems.length(); i++) {
 				JSONObject problem = problems.getJSONObject(i);
 				Problem p = new Problem();
@@ -93,9 +96,45 @@ public class CodeForcesCrawler {
 
 			e.printStackTrace();
 		}
+		int idx = 0 ;
+		for (Problem p : ps) {
+			idx ++;
+			if (idx % 50 == 0) {
+				System.out.println(p);
+				String html = fetchProblemDetail(p);
+				parser.parseProblem(html, p);
+			}
+		}
 	}
 	
-	void fetchProblemDetail(Problem problem) {
+	public String fetchProblemDetail(Problem problem) {
+		try {
+			HttpClient httpClient = HttpClientBuilder.create().build();
+			HttpGet getRequest = new HttpGet(problem.url);
+			getRequest.addHeader("accept", "text/html;charset=UTF-8");
+
+			HttpResponse response = httpClient.execute(getRequest);
+
+			if (response.getStatusLine().getStatusCode() != 200) {
+				throw new RuntimeException("Failed : HTTP error code : " + response.getStatusLine().getStatusCode());
+			}
+
+			BufferedReader reader = new BufferedReader(new InputStreamReader((response.getEntity().getContent())));
+			String line = null;
+			StringBuilder html = new StringBuilder();
+			while ((line = reader.readLine()) != null) {
+				html.append(line);
+			}
+			return html.toString();
+		} catch (ClientProtocolException e) {
+
+			e.printStackTrace();
+
+		} catch (IOException e) {
+
+			e.printStackTrace();
+		}		
 		
+		return null;
 	}
 }
